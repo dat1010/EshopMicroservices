@@ -28,7 +28,11 @@ services:
       - "6060:8081"
     build:
       context: .
-      dockerfile: ../src/Services/Catalog/Catalog.API/Dockerfile
+      dockerfile: src/Services/Catalog/Catalog.API/Dockerfile
+    volumes:
+      - ${HOME}/.microsoft/usersecrets:/home/app/.microsoft/usersecrets:ro
+      - ${HOME}/.aspnet/https:/https:ro
+
 
 volumes:
   postgres_catalog:

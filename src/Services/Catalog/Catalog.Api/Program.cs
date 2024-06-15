@@ -1,3 +1,6 @@
+using HealthChecks.UI.Client;
+using Microsoft.AspNetCore.Diagnostics.HealthChecks;
+
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Host.ConfigureAppConfiguration((context, config) =>
@@ -9,15 +12,30 @@ builder.Host.ConfigureAppConfiguration((context, config) =>
 });
 // Add services to the container.
 //
+var assembly = typeof(Program).Assembly;
+
 builder.Services.AddCarter();
 builder.Services.AddMediatR(config => 
 {
-    config.RegisterServicesFromAssembly(typeof(Program).Assembly);
+    config.RegisterServicesFromAssembly(assembly);
+    config.AddOpenBehavior(typeof(ValidationBehavior<,>));
+    config.AddOpenBehavior(typeof(LoggingBehavior<,>));
 });
+
+builder.Services.AddValidatorsFromAssembly(assembly);
+
 builder.Services.AddMarten(opts =>
 {
     opts.Connection(builder.Configuration.GetConnectionString("Database")!);
 }).UseLightweightSessions();
+
+if (builder.Environment.IsDevelopment())
+    builder.Services.InitializeMartenWith<CatalogInitialData>();
+
+builder.Services.AddExceptionHandler<CustomExceptionHandler>();
+
+builder.Services.AddHealthChecks()
+    .AddNpgSql(builder.Configuration.GetConnectionString("Database")!);
 
 var app = builder.Build();
 
@@ -25,14 +43,29 @@ var app = builder.Build();
 
 app.MapCarter();
 
-var urls = builder.Configuration["profiles:https:applicationUrl"]?.Split(';');
-if (urls != null)
-{
-    foreach (var url in urls)
+app.UseExceptionHandler(options => {});
+
+app.UseHealthChecks("/health", 
+    new HealthCheckOptions
     {
-        app.Urls.Add(url);
-    }
+        ResponseWriter = UIResponseWriter.WriteHealthCheckUIResponse
+    });
+
+if (app.Environment.IsDevelopment())
+{
+    app.Urls.Clear();
+    app.Urls.Add("http://*:8080");
 }
+
+
+// var urls = builder.Configuration["profiles:https:applicationUrl"]?.Split(';');
+// if (urls != null)
+// {
+//     foreach (var url in urls)
+//     {
+//         app.Urls.Add(url);
+//     }
+// }
 
 
 app.Run();

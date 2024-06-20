@@ -51,21 +51,21 @@ app.UseHealthChecks("/health",
         ResponseWriter = UIResponseWriter.WriteHealthCheckUIResponse
     });
 
-if (app.Environment.IsDevelopment())
-{
-    app.Urls.Clear();
-    app.Urls.Add("http://*:8080");
-}
-
-
-// var urls = builder.Configuration["profiles:https:applicationUrl"]?.Split(';');
-// if (urls != null)
+// if (app.Environment.IsDevelopment())
 // {
-//     foreach (var url in urls)
-//     {
-//         app.Urls.Add(url);
-//     }
+//     app.Urls.Clear();
+//     app.Urls.Add("http://*:8080");
 // }
+
+
+var urls = builder.Configuration["profiles:https:applicationUrl"]?.Split(';');
+if (urls != null)
+{
+    foreach (var url in urls)
+    {
+        app.Urls.Add(url);
+    }
+}
 
 
 app.Run();
